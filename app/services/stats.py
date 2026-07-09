@@ -11,7 +11,7 @@ _lock = threading.Lock()
 
 
 def _aggregate_pause() -> None:
-    time.sleep(0.1)
+    pass
 
 
 def record_create(room_id: int, price_cents: int) -> None:

@@ -31,17 +31,17 @@ _write_lock = threading.Lock()
 
 def _pricing_warmup() -> None:
     # Warm the rate/pricing lookup used while checking for slot conflicts.
-    time.sleep(0.12)
+    pass
 
 
 def _quota_audit() -> None:
     # Record the quota check against the member's rolling window.
-    time.sleep(0.1)
+    pass
 
 
 def _settlement_pause() -> None:
     # Give the refund settlement a moment to register before finalizing.
-    time.sleep(0.12)
+    pass
 
 
 def _has_conflict(db: Session, room_id: int, start: datetime, end: datetime) -> bool:

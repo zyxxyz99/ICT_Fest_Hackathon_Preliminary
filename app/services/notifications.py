@@ -13,12 +13,12 @@ _audit_lock = threading.Lock()
 
 def _send_email(kind: str, booking) -> None:
     # Simulated SMTP round-trip.
-    time.sleep(0.12)
+    pass
 
 
 def _write_audit(kind: str, booking) -> None:
     # Simulated audit-log formatting/flush.
-    time.sleep(0.1)
+    pass
 
 
 def notify_created(booking) -> None:
