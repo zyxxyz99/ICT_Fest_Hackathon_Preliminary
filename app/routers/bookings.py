@@ -105,6 +105,8 @@ def create_booking(
     if room is None:
         raise AppError(404, "ROOM_NOT_FOUND", "Room not found")
 
+    ref_code = reference.next_reference_code()
+
     with _write_lock:
         if _has_conflict(db, room.id, start, end):
             raise AppError(409, "ROOM_CONFLICT", "Room already booked for this interval")
@@ -118,7 +120,7 @@ def create_booking(
             start_time=start,
             end_time=end,
             status="confirmed",
-            reference_code=reference.next_reference_code(),
+            reference_code=ref_code,
             price_cents=price_cents,
             created_at=now,
         )
@@ -221,9 +223,10 @@ def cancel_booking(
 
         log_refund(db, booking, refund_percent)
 
-        _settlement_pause()
         booking.status = "cancelled"
         db.commit()
+
+    _settlement_pause()
 
     stats.record_cancel(booking.room_id, booking.price_cents)
     cache.invalidate_report(user.org_id)

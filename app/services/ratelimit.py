@@ -8,7 +8,8 @@ _WINDOW_SECONDS = 60
 _MAX_REQUESTS = 20
 
 _buckets: dict[int, list[float]] = {}
-_lock = threading.Lock()
+_user_locks: dict[int, threading.Lock] = {}
+_meta_lock = threading.Lock()
 
 
 def _settle_pause() -> None:
@@ -18,7 +19,12 @@ def _settle_pause() -> None:
 
 
 def record_and_check(user_id: int) -> None:
-    with _lock:
+    with _meta_lock:
+        if user_id not in _user_locks:
+            _user_locks[user_id] = threading.Lock()
+        lock = _user_locks[user_id]
+
+    with lock:
         now = time.time()
         bucket = _buckets.get(user_id, [])
         bucket = [t for t in bucket if t > now - _WINDOW_SECONDS]
