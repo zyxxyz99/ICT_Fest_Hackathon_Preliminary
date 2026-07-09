@@ -362,7 +362,7 @@ A cross-org `room_id` now simply matches nothing (header-only CSV).
 
 ---
 
-## Bug 16 — Race: Duplicate Reference Codes (Hard)
+## Bug 16 — Race: Duplicate Reference Codes
 
 **File:** `app/services/reference.py`, lines 17–21
 
@@ -388,7 +388,7 @@ def next_reference_code() -> str:
 
 ---
 
-## Bug 17 — Race: Rate Limiter Undercounts Concurrent Requests (Hard)
+## Bug 17 — Race: Rate Limiter Undercounts Concurrent Requests
 
 **File:** `app/services/ratelimit.py`, lines 18–26
 
@@ -406,7 +406,7 @@ records, and writes its bucket.
 
 ---
 
-## Bug 18 — Race: Room Stats Lose Updates (Hard)
+## Bug 18 — Race: Room Stats Lose Updates
 
 **File:** `app/services/stats.py`, lines 15–26
 
@@ -423,7 +423,7 @@ atomic.
 
 ---
 
-## Bug 19 — Race: Double-Booking and Quota Bypass on Concurrent Creates (Hard)
+## Bug 19 — Race: Double-Booking and Quota Bypass on Concurrent Creates
 
 **File:** `app/routers/bookings.py` (`create_booking`, conflict/quota check → insert)
 
@@ -452,7 +452,7 @@ with _write_lock:
 
 ---
 
-## Bug 20 — Race: Concurrent Cancels Produce Duplicate Refunds (Hard)
+## Bug 20 — Race: Concurrent Cancels Produce Duplicate Refunds
 
 **File:** `app/routers/bookings.py` (`cancel_booking`)
 
@@ -472,7 +472,7 @@ and the response amount always equals the logged amount (see Bug 13).
 
 ---
 
-## Bug 21 — Deadlock: Opposite Lock Order in Notifications Hangs the Service (Hard)
+## Bug 21 — Deadlock: Opposite Lock Order in Notifications Hangs the Service
 
 **File:** `app/services/notifications.py`, lines 24–35
 
@@ -713,7 +713,7 @@ This reduces `_write_lock` hold time by ~240ms total across create + cancel path
 
 ## Bug 28 — Simulated Sleeps Inside Locks Serialize Booking Requests Globally (Liveness)
 
-**Files:** `app/routers/bookings.py` (lines 34, 39, 44), `app/services/reference.py` (line 16), `app/services/stats.py` (line 14), `app/services/notifications.py` (lines 16, 21)
+**Files:** `app/routers/bookings.py` (lines 34, 39, 44), `app/services/reference.py` (line 16), `app/services/stats.py` (line 14), `app/services/notifications.py` (lines 16, 21), `app/services/ratelimit.py` (line 15)
 
 ### What / Why
 Rule 16: the service must respond to all endpoints at all times; no combination of concurrent valid requests may hang it. Although functional locks were placed to prevent race conditions, several simulated `time.sleep()` statements (ranging from 100ms to 120ms each) were left inside those locks. 
@@ -723,8 +723,9 @@ During a single `POST /bookings` request:
 - `_write_lock` was held for 220ms (`_pricing_warmup` + `_quota_audit`).
 - `stats._lock` was held for 100ms (`_aggregate_pause`).
 - `_email_lock` was held for 220ms (`_send_email` + `_write_audit`).
+- `user_lock` (in `ratelimit.py`) was held for 100ms (`_settle_pause`).
 
-This resulted in a total cumulative delay of **~660ms of dead time** serialized globally per request. Under a load of 50 concurrent create requests, the 50th request would take over **30 seconds** to complete, causing HTTP timeouts and violating the liveness requirement.
+This resulted in a total cumulative delay of **~760ms of dead time** serialized globally or per-user per request. Under a load of 50 concurrent create requests, the 50th request would take over **30 seconds** to complete, causing HTTP timeouts and violating the liveness requirement.
 
 ### Fix
 Removed the `time.sleep()` calls from the following functions, converting them to `pass` to eliminate all artificial serialization overhead while preserving the necessary locking structures:
@@ -732,6 +733,7 @@ Removed the `time.sleep()` calls from the following functions, converting them t
 - `reference.py`: `_format_pause()`
 - `stats.py`: `_aggregate_pause()`
 - `notifications.py`: `_send_email()` and `_write_audit()`
+- `ratelimit.py`: `_settle_pause()`
 
 ---
 

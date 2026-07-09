@@ -15,7 +15,7 @@ _meta_lock = threading.Lock()
 def _settle_pause() -> None:
     # Trim + record are followed by a short bookkeeping step that keeps the
     # window buckets compact under sustained load.
-    time.sleep(0.1)
+    pass
 
 
 def record_and_check(user_id: int) -> None:
